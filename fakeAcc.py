@@ -17,7 +17,10 @@ from sklearn.neural_network import MLPClassifier
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.layers import Conv1D, Dense, Flatten, Dropout, MaxPooling1D
-from tensorflow.keras.layers import LSTM, Dense, Dropout
+from tensorflow.keras.layers import InputLayer, LSTM, Dropout, Dense
+from sklearn.preprocessing import StandardScaler
+from tensorflow.keras.optimizers import Adam
+
 
 
 # Load the datasets
@@ -155,6 +158,10 @@ for model_name, model in models.items():
     print(classification_report(y_test, y_pred, digits=4))
     print("-" * 50)
 
+print("X_train shape:", X_train.shape)
+print("y_train shape:", y_train.shape)
+
+
 
 # Load the training and testing datasets
 X_train = pd.read_csv("X_train.csv")
@@ -175,11 +182,6 @@ y_pred = mlp_model.predict(X_test) #Uses the trained model to predict labels for
 print("MLP Model Evaluation:")
 print(classification_report(y_test, y_pred, digits=4))
 
-# Load the training and testing datasets
-X_train = pd.read_csv("X_train.csv").values
-y_train = pd.read_csv("y_train.csv").values.ravel()
-X_test = pd.read_csv("X_test.csv").values
-y_test = pd.read_csv("y_test.csv").values.ravel()
 
 # Reshape data for CNN (adding a channel dimension)
 X_train = np.expand_dims(X_train, axis=-1)
@@ -212,25 +214,45 @@ y_pred = (cnn_model.predict(X_test) > 0.5).astype("int32").ravel()
 print("CNN Model Evaluation:")
 print(classification_report(y_test, y_pred, digits=4))
 
-# Define LSTM model
-lstm_model = Sequential([
-    LSTM(64, return_sequences=True, input_shape=(X_train.shape[1], X_train.shape[2])),
-    Dropout(0.5),
-    LSTM(32, return_sequences=False),
-    Dropout(0.5),
-    Dense(32, activation='relu'),
-    Dense(1, activation='sigmoid')  # Binary classification
-])
 
-# Compile the model
-lstm_model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+# Preprocessing steps (example)
+scaler = MinMaxScaler()
 
-# Train the LSTM model
-print("Training LSTM Model...")
-lstm_model.fit(X_train, y_train, epochs=20, batch_size=32, validation_split=0.2, verbose=1)
+# Ensure X_train and X_test are 2D before scaling
+if len(X_train.shape) > 2:
+    X_train = X_train.reshape((X_train.shape[0], -1))
+if len(X_test.shape) > 2:
+    X_test = X_test.reshape((X_test.shape[0], -1))
+
+# Now apply MinMaxScaler
+scaler = MinMaxScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# Step 2: Reshape to 3D for LSTM
+X_train_lstm = X_train_scaled.reshape((X_train_scaled.shape[0], 1, X_train_scaled.shape[1]))
+X_test_lstm = X_test_scaled.reshape((X_test_scaled.shape[0], 1, X_test_scaled.shape[1]))
+
+# Set timesteps and features
+timesteps = 1
+features = X_train_scaled.shape[1]
+
+# Now build your LSTM model
+
+lstm_model = Sequential()
+lstm_model.add(InputLayer(input_shape=(timesteps, features)))
+lstm_model.add(LSTM(64, activation='tanh', return_sequences=False))
+lstm_model.add(Dropout(0.2))
+lstm_model.add(Dense(32, activation='relu'))
+lstm_model.add(Dense(1, activation='sigmoid'))
+
+lstm_model.compile(loss='binary_crossentropy', optimizer=Adam(), metrics=['accuracy'])
+
+# Train the model
+lstm_model.fit(X_train_lstm, y_train, epochs=10, batch_size=32, verbose=1, validation_data=(X_test_lstm, y_test))
 
 # Make predictions
-y_pred = (lstm_model.predict(X_test) > 0.5).astype("int32").ravel()
+y_pred = (lstm_model.predict(X_test_lstm) > 0.5).astype("int32").ravel()
 
 # Evaluate the model
 print("LSTM Model Evaluation:")
@@ -253,10 +275,11 @@ from sklearn.svm import SVC
 from sklearn.metrics import classification_report
 
 #Saving the model:
-joblib.dump(model, 'model_filename.pkl')
+joblib.dump(models["Random Forest"], 'random_forest_model.pkl')
+
 
 # Load model
-model = joblib.load('model_filename.pkl')
+model = joblib.load("random_forest_model.pkl")
 
 # ======= Section 2: Load and Preprocess Data =======
 # Load your cleaned and selected feature dataset

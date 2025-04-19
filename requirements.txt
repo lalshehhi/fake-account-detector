@@ -1,0 +1,7 @@
+streamlit
+pandas
+numpy
+imbalanced-learn
+matplotlib
+seaborn
+tensorflow

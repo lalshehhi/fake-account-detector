@@ -84,6 +84,7 @@ plt.ylabel("Count")
 plt.title("Class Distribution of Real and Fake Accounts After Balancing")
 plt.show()
 
+
 # B. Profile Picture Effect (Stacked Bar Chart)
 profile_pic_counts = balanced_df.groupby(['isFake', 'userHasProfilPic']).size().unstack()
 fig, ax = plt.subplots(figsize=(8, 5))
@@ -118,6 +119,46 @@ plt.xlabel("Number of Digits in Username")
 plt.ylabel("Count")
 plt.title("Username Digit Count Distribution for Real vs. Fake Accounts")
 plt.legend()
+plt.show()
+
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+import matplotlib.pyplot as plt
+
+# Load your selected features dataset
+df = pd.read_csv("selectedFeaturesAccountData.csv")
+
+# Split features and target
+X = df.drop(columns=["isFake"])
+y = df["isFake"]
+
+# Split into training and testing sets (80% train, 20% test)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, stratify=y, random_state=42
+)
+
+# Train the model (Random Forest example)
+model = RandomForestClassifier(random_state=42)
+model.fit(X_train, y_train)
+
+# Predict on the test set
+y_pred = model.predict(X_test)
+
+import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+
+# Example data (replace with your own)
+y_true = [0, 1, 0, 1, 0, 1, 1, 0]     # Actual labels
+y_pred = [0, 1, 0, 0, 0, 1, 1, 1]     # Predicted labels
+
+# Create confusion matrix
+cm = confusion_matrix(y_true, y_pred)
+
+# Display confusion matrix
+disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=[0, 1])
+disp.plot(cmap='Blues')
+plt.title('Confusion Matrix')
 plt.show()
 
 
@@ -340,7 +381,7 @@ if page == "🏠 Home":
         Welcome to the **Fake and Bot Account Detection Tool**!  
         Use this app to:
         - 📌 Detect suspicious or fake accounts.
-        - 🤖 (Soon) Identify bot-like behavior on social media.
+        - 🤖 Identify bot-like behavior on social media.
 
         Select a page from the sidebar to get started.
     """)
@@ -381,7 +422,7 @@ elif page == "🧪 Fake Account Detection":
 
 # --- Page 3: Bot Account Detection ---
 elif page == "🤖 Bot Account Detection":
-    st.title("🤖 Bot Account Detection (Coming Soon)")
+    st.title("🤖 Bot Account Detection")
 
     st.markdown("""
         This feature will help identify accounts with automated or bot-like behavior.
